@@ -1,4 +1,4 @@
-# Few-Shot Learning Project
+# Few-Shot Learning Prompt Improvement
 
 A Python implementation for few-shot learning with prompt evolution and evaluation capabilities.
 
