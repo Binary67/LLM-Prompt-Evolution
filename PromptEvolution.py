@@ -4,6 +4,42 @@ from openai import AzureOpenAI
 from dotenv import load_dotenv
 from typing import Optional
 
+
+def GenerateFewShotExamples(
+    EvaluationDataFrame: pd.DataFrame,
+    LabelColumn: str,
+    Limit: int = 3
+) -> str:
+    """Generate few-shot examples from misclassified rows.
+
+    Args:
+        EvaluationDataFrame: DataFrame with evaluation results including predictions
+        LabelColumn: The name of the true label column
+        Limit: Maximum number of examples to generate
+
+    Returns:
+        Formatted string containing few-shot examples
+    """
+    Misclassified = EvaluationDataFrame[
+        EvaluationDataFrame['Prediction'] != EvaluationDataFrame[LabelColumn].astype(str)
+    ]
+
+    if Misclassified.empty:
+        return ""
+
+    TextColumnCandidates = [
+        Col for Col in EvaluationDataFrame.columns
+        if Col not in {'Prediction', 'ExtractedLabel', LabelColumn}
+    ]
+    TextColumn = 'text' if 'text' in TextColumnCandidates else TextColumnCandidates[0]
+
+    Selected = Misclassified.head(Limit)
+    Examples = [
+        f"Example: {Row[TextColumn]} -> {Row[LabelColumn]}"
+        for _, Row in Selected.iterrows()
+    ]
+    return "\n".join(Examples)
+
 load_dotenv()
 
 
@@ -11,7 +47,8 @@ def ImprovePrompt(
     Prompt: str,
     Accuracy: float,
     ResultsDataFrame: pd.DataFrame,
-    LabelColumn: Optional[str] = None
+    LabelColumn: Optional[str] = None,
+    IncludeFewShotExamples: bool = False
 ) -> str:
     """
     Analyze error patterns in model predictions and improve the prompt accordingly.
@@ -21,6 +58,7 @@ def ImprovePrompt(
         Accuracy: The accuracy score achieved (between 0 and 1)
         ResultsDataFrame: DataFrame containing ground truth and predictions
         LabelColumn: Optional name of the label column (if not provided, will look for common names)
+        IncludeFewShotExamples: Whether to include automatically generated few-shot examples
     
     Returns:
         An improved version of the prompt
@@ -78,8 +116,14 @@ Provide a concise analysis focusing on actionable insights."""
     )
     
     ErrorAnalysis = ErrorAnalysisResponse.choices[0].message.content
-    
+
     # Prepare prompt improvement request
+    FewShotSection = ""
+    if IncludeFewShotExamples:
+        FewShotText = GenerateFewShotExamples(ResultsDataFrame, LabelColumn)
+        if FewShotText:
+            FewShotSection = f"\nFew-shot examples:\n{FewShotText}"
+
     ImprovementPrompt = f"""Based on the error analysis below, improve the original prompt to reduce these errors:
 
 Original Prompt:
@@ -88,7 +132,7 @@ Original Prompt:
 Current Accuracy: {Accuracy:.2%}
 
 Error Analysis:
-{ErrorAnalysis}
+{ErrorAnalysis}{FewShotSection}
 
 Please provide an improved version of the prompt that:
 1. Addresses the identified error patterns

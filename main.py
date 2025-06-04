@@ -6,7 +6,7 @@ from HybridPromptEvolution import HybridImprovePrompt
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-async def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5, AccuracyThreshold=0.95, BatchSize=10):
+async def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5, AccuracyThreshold=0.95, BatchSize=10, UseFewShot=False):
     
     # Evaluate the prompt
     print("Evaluating Prompt on Training Data")
@@ -81,7 +81,8 @@ async def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterat
                 CurrentPrompt=CurrentPrompt,
                 CurrentAccuracy=CurrentAccuracy,
                 CurrentResults=CurrentResults,
-                LabelColumn=LabelColumn
+                LabelColumn=LabelColumn,
+                IncludeFewShotExamples=UseFewShot
             )
         else:
             print("Current prompt is performing well. Continuing to improve current prompt.")
@@ -90,7 +91,8 @@ async def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterat
                 Prompt=CurrentPrompt,
                 Accuracy=CurrentAccuracy,
                 ResultsDataFrame=CurrentResults,
-                LabelColumn=LabelColumn
+                LabelColumn=LabelColumn,
+                IncludeFewShotExamples=UseFewShot
             )
         
         print("\nImproved Prompt:")
@@ -241,7 +243,8 @@ Does this statement express career aspiration? Please respond with only: has_asp
         PromptTemplate=PromptTemplate,
         MaxIterations=5,
         AccuracyThreshold=0.95,
-        BatchSize=10
+        BatchSize=10,
+        UseFewShot=False
     )
     
     # Test the best prompt on validation data

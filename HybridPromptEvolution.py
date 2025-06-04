@@ -1,5 +1,5 @@
 import pandas as pd
-from PromptEvolution import ImprovePrompt
+from PromptEvolution import ImprovePrompt, GenerateFewShotExamples
 import openai
 import os
 import json
@@ -109,7 +109,7 @@ def CombineErrorFeedback(BestErrorPatterns: Dict, CurrentErrorPatterns: Dict) ->
 
 def HybridImprovePrompt(BestPrompt: str, BestAccuracy: float, BestResults: pd.DataFrame,
                         CurrentPrompt: str, CurrentAccuracy: float, CurrentResults: pd.DataFrame,
-                        LabelColumn: str) -> str:
+                        LabelColumn: str, IncludeFewShotExamples: bool = False) -> str:
     """
     Improve prompt using hybrid feedback from both best and current prompts.
     
@@ -121,7 +121,8 @@ def HybridImprovePrompt(BestPrompt: str, BestAccuracy: float, BestResults: pd.Da
         CurrentAccuracy: Accuracy of the current prompt
         CurrentResults: Evaluation results from the current prompt
         LabelColumn: Name of the column containing true labels
-        
+        IncludeFewShotExamples: Whether to include automatically generated few-shot examples
+
     Returns:
         Improved prompt incorporating feedback from both attempts
     """
@@ -131,6 +132,12 @@ def HybridImprovePrompt(BestPrompt: str, BestAccuracy: float, BestResults: pd.Da
     
     # Combine feedback
     CombinedFeedback = CombineErrorFeedback(BestErrorPatterns, CurrentErrorPatterns)
+
+    FewShotSection = ""
+    if IncludeFewShotExamples:
+        FewShotText = GenerateFewShotExamples(CurrentResults, LabelColumn)
+        if FewShotText:
+            FewShotSection = f"\nFew-shot examples:\n{FewShotText}"
     
     # Create context for improvement
     ImprovementContext = f"""
@@ -144,7 +151,7 @@ ATTEMPTED PROMPT (Accuracy: {CurrentAccuracy:.2%}):
 
 The attempted prompt performed worse than the best prompt. Here's the combined error analysis:
 
-{CombinedFeedback}
+{CombinedFeedback}{FewShotSection}
 
 Key insights:
 1. The best prompt still has persistent errors that need addressing
