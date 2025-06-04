@@ -2,7 +2,8 @@ import pandas as pd
 import re
 from typing import List, Tuple, Dict
 from sklearn.metrics import precision_score, recall_score, f1_score
-from OutputGeneration import GenerateOutput
+from OutputGeneration import GenerateOutput, GenerateOutputAsync
+import asyncio
 
 
 def ExtractLabelFromOutput(Output: str, UniqueLabels: List[str]) -> str:
@@ -39,7 +40,8 @@ def EvaluatePrompt(
     Prompt: str,
     DataFrame: pd.DataFrame,
     FeatureColumns: List[str],
-    LabelColumn: str
+    LabelColumn: str,
+    UseAsync: bool = False
 ) -> Tuple[Dict[str, float], pd.DataFrame]:
     """
     Evaluate a prompt by using it to predict labels and calculating accuracy.
@@ -49,6 +51,7 @@ def EvaluatePrompt(
         DataFrame: The dataframe to evaluate on
         FeatureColumns: List of column names to use as features
         LabelColumn: The column name containing true labels
+        UseAsync: If True, run API calls concurrently using asyncio
     
     Returns:
         Tuple containing:
@@ -59,21 +62,28 @@ def EvaluatePrompt(
     UniqueLabels = DataFrame[LabelColumn].unique().tolist()
     UniqueLabels = [str(Label) for Label in UniqueLabels]
     
-    Predictions = []
-    ExtractedLabels = []
-    
-    # Generate predictions for each row
-    for _, Row in DataFrame.iterrows():
-        # Create variables dict for the prompt
-        Variables = {Col: Row[Col] for Col in FeatureColumns}
-        
-        # Generate prediction using the prompt
-        Prediction = GenerateOutput(Prompt, **Variables)
-        Predictions.append(Prediction.strip())
-        
-        # Extract label from prediction
-        ExtractedLabel = ExtractLabelFromOutput(Prediction, UniqueLabels)
-        ExtractedLabels.append(ExtractedLabel)
+    Predictions: List[str]
+
+    async def GatherPredictionsAsync() -> List[str]:
+        Tasks = []
+        for _, Row in DataFrame.iterrows():
+            Variables = {Col: Row[Col] for Col in FeatureColumns}
+            Tasks.append(GenerateOutputAsync(Prompt, **Variables))
+        return await asyncio.gather(*Tasks)
+
+    if UseAsync:
+        Predictions = asyncio.run(GatherPredictionsAsync())
+    else:
+        Predictions = []
+        for _, Row in DataFrame.iterrows():
+            Variables = {Col: Row[Col] for Col in FeatureColumns}
+            Prediction = GenerateOutput(Prompt, **Variables)
+            Predictions.append(Prediction.strip())
+
+    ExtractedLabels = [
+        ExtractLabelFromOutput(Prediction, UniqueLabels)
+        for Prediction in Predictions
+    ]
     
     # Add predictions to dataframe
     ResultDataFrame = DataFrame.copy()
