@@ -1,6 +1,7 @@
 import pandas as pd
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+from sklearn.metrics import precision_score, recall_score, f1_score
 from OutputGeneration import GenerateOutput
 
 
@@ -35,11 +36,11 @@ def ExtractLabelFromOutput(Output: str, UniqueLabels: List[str]) -> str:
 
 
 def EvaluatePrompt(
-    Prompt: str, 
-    DataFrame: pd.DataFrame, 
-    FeatureColumns: List[str], 
+    Prompt: str,
+    DataFrame: pd.DataFrame,
+    FeatureColumns: List[str],
     LabelColumn: str
-) -> Tuple[float, pd.DataFrame]:
+) -> Tuple[Dict[str, float], pd.DataFrame]:
     """
     Evaluate a prompt by using it to predict labels and calculating accuracy.
     
@@ -51,7 +52,7 @@ def EvaluatePrompt(
     
     Returns:
         Tuple containing:
-        - Accuracy score (float between 0 and 1)
+        - Dictionary with Accuracy, Precision, Recall and F1 scores
         - DataFrame with additional 'Prediction' column
     """
     # Get unique labels from the label column
@@ -79,10 +80,36 @@ def EvaluatePrompt(
     ResultDataFrame['Prediction'] = Predictions
     ResultDataFrame['ExtractedLabel'] = ExtractedLabels
     
-    # Calculate accuracy using extracted labels
+    # Calculate metrics using extracted labels
     CorrectPredictions = sum(
         ResultDataFrame['ExtractedLabel'] == ResultDataFrame[LabelColumn].astype(str)
     )
     Accuracy = CorrectPredictions / len(ResultDataFrame)
-    
-    return Accuracy, ResultDataFrame
+
+    Precision = precision_score(
+        ResultDataFrame[LabelColumn].astype(str),
+        ResultDataFrame['ExtractedLabel'],
+        average='macro',
+        zero_division=0
+    )
+    Recall = recall_score(
+        ResultDataFrame[LabelColumn].astype(str),
+        ResultDataFrame['ExtractedLabel'],
+        average='macro',
+        zero_division=0
+    )
+    F1 = f1_score(
+        ResultDataFrame[LabelColumn].astype(str),
+        ResultDataFrame['ExtractedLabel'],
+        average='macro',
+        zero_division=0
+    )
+
+    Metrics = {
+        'Accuracy': Accuracy,
+        'Precision': Precision,
+        'Recall': Recall,
+        'F1': F1
+    }
+
+    return Metrics, ResultDataFrame
