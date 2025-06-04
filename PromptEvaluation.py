@@ -6,32 +6,38 @@ from OutputGeneration import GenerateOutput, GenerateOutputBatch
 
 
 def ExtractLabelFromOutput(Output: str, UniqueLabels: List[str]) -> str:
-    """
-    Extract a label from GPT output using regex matching.
-    
+    """Extract a label from GPT output.
+
     Args:
         Output: The GPT-generated output text
         UniqueLabels: List of possible label values to match
-        
+
     Returns:
         Matched label or empty string if no match found
     """
+    StrippedOutput = Output.strip()
+
+    # Check for exact match first (case-insensitive)
+    for Label in UniqueLabels:
+        if StrippedOutput.lower() == str(Label).lower():
+            return str(Label)
+
     # Escape special regex characters in labels
     EscapedLabels = [re.escape(str(Label)) for Label in UniqueLabels]
-    
+
     # Create pattern that matches any of the labels (case-insensitive)
-    Pattern = r'\b(' + '|'.join(EscapedLabels) + r')\b'
-    
+    Pattern = r"\b(" + "|".join(EscapedLabels) + r")\b"
+
     # Search for the pattern in the output
-    Match = re.search(Pattern, Output, re.IGNORECASE)
-    
+    Match = re.search(Pattern, StrippedOutput, re.IGNORECASE)
+
     if Match:
         # Find which original label matches (case-insensitive)
         MatchedText = Match.group(1)
         for Label in UniqueLabels:
             if str(Label).lower() == MatchedText.lower():
                 return str(Label)
-    
+
     return ""
 
 
