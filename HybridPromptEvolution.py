@@ -1,10 +1,9 @@
 import pandas as pd
 from PromptEvolution import ImprovePrompt
-import openai
 import os
 import json
 from typing import Dict, List, Tuple
-from openai import AzureOpenAI
+from OpenAiClient import GetClient
 
 def AnalyzeErrorPatterns(ResultsDataFrame: pd.DataFrame, LabelColumn: str) -> Dict[str, List[Dict]]:
     """
@@ -158,11 +157,7 @@ Based on this analysis, improve the BEST prompt to:
 
 Return only the improved prompt text.
 """
-    Client = AzureOpenAI(
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
-    )
+    Client = GetClient()
     
     Response = Client.chat.completions.create(
         model = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
