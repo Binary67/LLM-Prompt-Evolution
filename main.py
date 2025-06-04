@@ -11,15 +11,20 @@ def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5
     print("Evaluating Prompt on Training Data")
     print(f"Number of samples: {len(DataFrame)}")
     
-    Accuracy, ResultDataFrame = EvaluatePrompt(
+    Metrics, ResultDataFrame = EvaluatePrompt(
         Prompt=PromptTemplate,
         DataFrame=DataFrame,
         FeatureColumns=FeatureColumns,
         LabelColumn=LabelColumn
     )
+
+    Accuracy = Metrics['Accuracy']
     
     # Display results
     print(f"Accuracy: {Accuracy:.2%}")
+    print(f"Precision: {Metrics['Precision']:.2%}")
+    print(f"Recall: {Metrics['Recall']:.2%}")
+    print(f"F1 Score: {Metrics['F1']:.2%}")
     print("\nDetailed Results:")
     print("-" * 80)
     
@@ -36,6 +41,9 @@ def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5
     CorrectCount = sum(ResultDataFrame['ExtractedLabel'] == ResultDataFrame[LabelColumn].astype(str))
     print(f"Correct Predictions: {CorrectCount}/{len(ResultDataFrame)}")
     print(f"Accuracy: {Accuracy:.2%}")
+    print(f"Precision: {Metrics['Precision']:.2%}")
+    print(f"Recall: {Metrics['Recall']:.2%}")
+    print(f"F1 Score: {Metrics['F1']:.2%}")
     
     # Iterative prompt improvement
     CurrentPrompt = PromptTemplate
@@ -106,17 +114,22 @@ def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5
         
         # Evaluate the improved prompt
         print("\nEvaluating Improved Prompt")
-        ImprovedAccuracy, ImprovedResults = EvaluatePrompt(
+        ImprovedMetrics, ImprovedResults = EvaluatePrompt(
             Prompt=ImprovedPrompt,
             DataFrame=DataFrame,
             FeatureColumns=FeatureColumns,
             LabelColumn=LabelColumn
         )
+
+        ImprovedAccuracy = ImprovedMetrics['Accuracy']
         
         # Display iteration results
         print(f"\nIteration {Iteration} Results:")
         print(f"  Previous Accuracy: {CurrentAccuracy:.2%}")
         print(f"  New Accuracy: {ImprovedAccuracy:.2%}")
+        print(f"  Precision: {ImprovedMetrics['Precision']:.2%}")
+        print(f"  Recall: {ImprovedMetrics['Recall']:.2%}")
+        print(f"  F1 Score: {ImprovedMetrics['F1']:.2%}")
         print(f"  Improvement: {(ImprovedAccuracy - CurrentAccuracy):.2%}")
         
         # Store iteration results
@@ -182,20 +195,26 @@ def TestBestPromptOnValidation(BestPrompt, ValidationData, FeatureColumns, Label
     print(f"Number of validation samples: {len(ValidationData)}")
     
     # Evaluate the best prompt on validation data
-    Accuracy, ResultDataFrame = EvaluatePrompt(
+    Metrics, ResultDataFrame = EvaluatePrompt(
         Prompt=BestPrompt,
         DataFrame=ValidationData,
         FeatureColumns=FeatureColumns,
         LabelColumn=LabelColumn
     )
+
+    Accuracy = Metrics['Accuracy']
     
     # Display results
     print(f"\nValidation Accuracy: {Accuracy:.2%}")
     print("\nValidation Results Summary:")
     print("-" * 40)
-    
+
     CorrectCount = sum(ResultDataFrame['ExtractedLabel'] == ResultDataFrame[LabelColumn].astype(str))
     print(f"Correct Predictions: {CorrectCount}/{len(ResultDataFrame)}")
+    print(f"Accuracy: {Accuracy:.2%}")
+    print(f"Precision: {Metrics['Precision']:.2%}")
+    print(f"Recall: {Metrics['Recall']:.2%}")
+    print(f"F1 Score: {Metrics['F1']:.2%}")
     
     # Display confusion matrix style summary
     UniqueLabels = ResultDataFrame[LabelColumn].unique()
