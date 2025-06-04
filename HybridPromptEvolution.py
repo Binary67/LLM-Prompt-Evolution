@@ -165,7 +165,7 @@ Return only the improved prompt text.
     )
     
     Response = Client.chat.completions.create(
-        model = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        model = os.getenv("AZURE_OPENAI_DEPLOYMENT"),
         messages=[
             {"role": "system", "content": "You are an expert in prompt engineering. Generate only the improved prompt without explanations."},
             {"role": "user", "content": ImprovementContext}
@@ -175,6 +175,11 @@ Return only the improved prompt text.
     )
     
     ImprovedPrompt = Response.choices[0].message.content.strip()
+    
+    # Check if {text} placeholder exists in the improved prompt
+    if '{text}' not in ImprovedPrompt:
+        # Append the text placeholder to ensure it's available for data input
+        ImprovedPrompt += "\n\nHere is the given feedback: {text}"
     
     return ImprovedPrompt
 

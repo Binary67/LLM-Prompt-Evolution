@@ -69,7 +69,7 @@ Provide a concise analysis focusing on actionable insights."""
 
     # Get error pattern analysis
     ErrorAnalysisResponse = Client.chat.completions.create(
-        model=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
         messages=[
             {"role": "system", "content": "You are an expert in analyzing machine learning errors and improving prompts."},
             {"role": "user", "content": ErrorAnalysisPrompt}
@@ -114,7 +114,7 @@ Return ONLY the improved prompt text, without any explanation or additional comm
 
     # Get improved prompt
     ImprovementResponse = Client.chat.completions.create(
-        model=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
         messages=[
             {"role": "system", "content": "You are an expert prompt engineer focused on improving classification accuracy."},
             {"role": "user", "content": ImprovementPrompt}
@@ -123,5 +123,10 @@ Return ONLY the improved prompt text, without any explanation or additional comm
     )
     
     ImprovedPrompt = ImprovementResponse.choices[0].message.content.strip()
+    
+    # Check if {text} placeholder exists in the improved prompt
+    if '{text}' not in ImprovedPrompt:
+        # Append the text placeholder to ensure it's available for data input
+        ImprovedPrompt += "\n\nHere is the given feedback: {text}"
     
     return ImprovedPrompt

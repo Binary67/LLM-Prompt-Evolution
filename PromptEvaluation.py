@@ -1,7 +1,8 @@
 import pandas as pd
 import re
+import asyncio
 from typing import List, Tuple
-from OutputGeneration import GenerateOutput
+from OutputGeneration import GenerateOutput, GenerateOutputBatch
 
 
 def ExtractLabelFromOutput(Output: str, UniqueLabels: List[str]) -> str:
@@ -71,6 +72,69 @@ def EvaluatePrompt(
         Predictions.append(Prediction.strip())
         
         # Extract label from prediction
+        ExtractedLabel = ExtractLabelFromOutput(Prediction, UniqueLabels)
+        ExtractedLabels.append(ExtractedLabel)
+    
+    # Add predictions to dataframe
+    ResultDataFrame = DataFrame.copy()
+    ResultDataFrame['Prediction'] = Predictions
+    ResultDataFrame['ExtractedLabel'] = ExtractedLabels
+    
+    # Calculate accuracy using extracted labels
+    CorrectPredictions = sum(
+        ResultDataFrame['ExtractedLabel'] == ResultDataFrame[LabelColumn].astype(str)
+    )
+    Accuracy = CorrectPredictions / len(ResultDataFrame)
+    
+    return Accuracy, ResultDataFrame
+
+
+async def EvaluatePromptAsync(
+    Prompt: str, 
+    DataFrame: pd.DataFrame, 
+    FeatureColumns: List[str], 
+    LabelColumn: str,
+    BatchSize: int = 10
+) -> Tuple[float, pd.DataFrame]:
+    """
+    Evaluate a prompt by using it to predict labels and calculating accuracy using async batch processing.
+    
+    Args:
+        Prompt: The prompt template with placeholders for features
+        DataFrame: The dataframe to evaluate on
+        FeatureColumns: List of column names to use as features
+        LabelColumn: The column name containing true labels
+        BatchSize: Number of concurrent requests to process at once
+    
+    Returns:
+        Tuple containing:
+        - Accuracy score (float between 0 and 1)
+        - DataFrame with additional 'Prediction' column
+    """
+    # Get unique labels from the label column
+    UniqueLabels = DataFrame[LabelColumn].unique().tolist()
+    UniqueLabels = [str(Label) for Label in UniqueLabels]
+    
+    # Prepare prompt-variable pairs for batch processing
+    PromptVariablePairs = []
+    for _, Row in DataFrame.iterrows():
+        Variables = {Col: Row[Col] for Col in FeatureColumns}
+        Variables['Prompt'] = Prompt
+        PromptVariablePairs.append(Variables)
+    
+    # Process in batches to avoid overwhelming the API
+    AllPredictions = []
+    for i in range(0, len(PromptVariablePairs), BatchSize):
+        Batch = PromptVariablePairs[i:i + BatchSize]
+        BatchPredictions = await GenerateOutputBatch(Batch)
+        AllPredictions.extend(BatchPredictions)
+    
+    # Strip whitespace from predictions
+    Predictions = [Pred.strip() for Pred in AllPredictions]
+    
+    # Extract labels from predictions
+    ExtractedLabels = []
+    for Prediction in Predictions:
         ExtractedLabel = ExtractLabelFromOutput(Prediction, UniqueLabels)
         ExtractedLabels.append(ExtractedLabel)
     

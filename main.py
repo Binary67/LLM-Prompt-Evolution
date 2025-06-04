@@ -1,38 +1,31 @@
 import pandas as pd
-from PromptEvaluation import EvaluatePrompt
+import asyncio
+from PromptEvaluation import EvaluatePromptAsync
 from PromptEvolution import ImprovePrompt
 from HybridPromptEvolution import HybridImprovePrompt
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5, AccuracyThreshold=0.95):
+async def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5, AccuracyThreshold=0.95, BatchSize=10):
     
     # Evaluate the prompt
     print("Evaluating Prompt on Training Data")
     print(f"Number of samples: {len(DataFrame)}")
     
-    Accuracy, ResultDataFrame = EvaluatePrompt(
+    Accuracy, ResultDataFrame = await EvaluatePromptAsync(
         Prompt=PromptTemplate,
         DataFrame=DataFrame,
         FeatureColumns=FeatureColumns,
-        LabelColumn=LabelColumn
+        LabelColumn=LabelColumn,
+        BatchSize=BatchSize
     )
     
     # Display results
     print(f"Accuracy: {Accuracy:.2%}")
-    print("\nDetailed Results:")
-    print("-" * 80)
-    
-    for Index, Row in ResultDataFrame.iterrows():
-        if str(Row['ExtractedLabel']) != str(Row[LabelColumn]):
-            print(f"Sample {Index + 1}:")
-            print(f"  True Label: {Row[LabelColumn]}")
-            print(f"  Prediction: {Row['Prediction']}")
-            print(f"  Extracted Label: {Row['ExtractedLabel']}")
     
     # Summary statistics
     print("\nSummary Statistics:")
-    print("-" * 40)
+    print("-" * 80)
     CorrectCount = sum(ResultDataFrame['ExtractedLabel'] == ResultDataFrame[LabelColumn].astype(str))
     print(f"Correct Predictions: {CorrectCount}/{len(ResultDataFrame)}")
     print(f"Accuracy: {Accuracy:.2%}")
@@ -70,9 +63,9 @@ def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5
             print(f"\nTarget accuracy of {AccuracyThreshold:.2%} achieved!")
             break
             
-        print(f"\n{'='*60}")
+        print(f"\n{'='*80}")
         print(f"ITERATION {Iteration}")
-        print(f"{'='*60}")
+        print(f"{'='*80}")
         print(f"Current accuracy: {CurrentAccuracy:.2%}")
         print(f"Best accuracy so far: {BestAccuracy:.2%}")
         
@@ -80,6 +73,7 @@ def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5
         if CurrentAccuracy < BestAccuracy:
             print("Current prompt is worse than best. Using hybrid approach to learn from both prompts.")
             # Use hybrid approach to combine feedback from both prompts
+
             ImprovedPrompt = HybridImprovePrompt(
                 BestPrompt=BestPrompt,
                 BestAccuracy=BestAccuracy,
@@ -100,17 +94,18 @@ def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5
             )
         
         print("\nImproved Prompt:")
-        print("-" * 40)
+        print("-" * 80)
         print(ImprovedPrompt)
-        print("-" * 40)
+        print("-" * 80)
         
         # Evaluate the improved prompt
         print("\nEvaluating Improved Prompt")
-        ImprovedAccuracy, ImprovedResults = EvaluatePrompt(
+        ImprovedAccuracy, ImprovedResults = await EvaluatePromptAsync(
             Prompt=ImprovedPrompt,
             DataFrame=DataFrame,
             FeatureColumns=FeatureColumns,
-            LabelColumn=LabelColumn
+            LabelColumn=LabelColumn,
+            BatchSize=BatchSize
         )
         
         # Display iteration results
@@ -154,14 +149,14 @@ def Main(DataFrame, FeatureColumns, LabelColumn, PromptTemplate, MaxIterations=5
 
     
     # Save best prompt to file
-    with open('/dbfs/mnt/uat/Franky/RetrainingPipeline/BestPrompt.txt', 'w') as File:
+    with open('BestPrompt.txt', 'w') as File:
         File.write(BestPrompt)
     print(f"Best prompt saved (from iteration {BestIteration})")
     
     return BestPrompt, BestAccuracy
 
 
-def TestBestPromptOnValidation(BestPrompt, ValidationData, FeatureColumns, LabelColumn):
+async def TestBestPromptOnValidation(BestPrompt, ValidationData, FeatureColumns, LabelColumn, BatchSize=10):
     """
     Test the best prompt on validation data and return accuracy and dataframe with predictions.
     
@@ -182,17 +177,18 @@ def TestBestPromptOnValidation(BestPrompt, ValidationData, FeatureColumns, Label
     print(f"Number of validation samples: {len(ValidationData)}")
     
     # Evaluate the best prompt on validation data
-    Accuracy, ResultDataFrame = EvaluatePrompt(
+    Accuracy, ResultDataFrame = await EvaluatePromptAsync(
         Prompt=BestPrompt,
         DataFrame=ValidationData,
         FeatureColumns=FeatureColumns,
-        LabelColumn=LabelColumn
+        LabelColumn=LabelColumn,
+        BatchSize=BatchSize
     )
     
     # Display results
     print(f"\nValidation Accuracy: {Accuracy:.2%}")
     print("\nValidation Results Summary:")
-    print("-" * 40)
+    print("-" * 80)
     
     CorrectCount = sum(ResultDataFrame['ExtractedLabel'] == ResultDataFrame[LabelColumn].astype(str))
     print(f"Correct Predictions: {CorrectCount}/{len(ResultDataFrame)}")
@@ -211,8 +207,8 @@ def TestBestPromptOnValidation(BestPrompt, ValidationData, FeatureColumns, Label
     return Accuracy, ResultDataFrame
 
 
-if __name__ == "__main__":
-    DataTA = pd.read_excel('/dbfs/mnt/uat/Franky/inputData/TA_RetrainingData.xlsx')
+async def RunMain():
+    DataTA = pd.read_excel('/home/frank/Projects/Projects/LLM-Prompt-Evolution/TA_RetrainingData.xlsx')
     DataTA = DataTA.dropna(subset = ['Validation'])
 
     DataTA['GroundTruth'] = np.where(
@@ -238,19 +234,25 @@ Talent Statement: {text}
 
 Does this statement express career aspiration? Please respond with only: has_aspiration or no_aspiration."""
     
-    BestPrompt, BestAccuracy = Main(
+    BestPrompt, BestAccuracy = await Main(
         DataFrame=TrainingData,
         FeatureColumns=FeatureColumns,
         LabelColumn=LabelColumn,
         PromptTemplate=PromptTemplate,
         MaxIterations=5,
-        AccuracyThreshold=0.95
+        AccuracyThreshold=0.95,
+        BatchSize=10
     )
     
     # Test the best prompt on validation data
-    ValidationAccuracy, ValidationResults = TestBestPromptOnValidation(
+    ValidationAccuracy, ValidationResults = await TestBestPromptOnValidation(
         BestPrompt=BestPrompt,
         ValidationData=ValidationData,
         FeatureColumns=FeatureColumns,
-        LabelColumn=LabelColumn
+        LabelColumn=LabelColumn,
+        BatchSize=10
     )
+
+
+if __name__ == "__main__":
+    asyncio.run(RunMain())

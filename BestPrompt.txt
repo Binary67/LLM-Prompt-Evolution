@@ -1,0 +1,5 @@
+Analyze the following talent statement and determine if it expresses career aspiration.
+
+Talent Statement: {text}
+
+Does this statement express career aspiration? Please respond with only: has_aspiration or no_aspiration.
