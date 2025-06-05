@@ -7,6 +7,14 @@ from PromptEvaluation import EvaluatePrompt
 from PromptEvolution import AnalyzeErrorsAndRevisePrompt
 from PromptSelector import PromptPool, SelectPrompt
 
+
+def GetBestPromptByF1(Results):
+    """Return the prompt with the highest F1 score from iteration results."""
+    if not Results:
+        raise ValueError("No iteration results available")
+    BestEntry = max(Results, key=lambda Item: Item["f1"])
+    return BestEntry["prompt"]
+
 async def Main(MaxIterations=5, AccuracyThreshold=0.8, Epsilon=0.1):
     #######################
     ### Data Processing ###
@@ -195,23 +203,37 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8, Epsilon=0.1):
 
         PromptPoolInstance.AddPrompt(RevisedPrompt, RevisedAccuracy)
 
-        IterationResults.append({
-            "iteration": Iteration + 1,
-            "prompt": CurrentPrompt,
-            "accuracy": CurrentAccuracy,
-            "precision": CurrentPrecision,
-            "recall": CurrentRecall,
-            "f1": CurrentF1,
-        })
-    
+    IterationResults.append({
+        "iteration": Iteration + 1,
+        "prompt": CurrentPrompt,
+        "accuracy": CurrentAccuracy,
+        "precision": CurrentPrecision,
+        "recall": CurrentRecall,
+        "f1": CurrentF1,
+    })
+
     print(
         f"\nFinal Accuracy after {min(Iteration + 1, MaxIterations)} iterations: {CurrentAccuracy:.3f} | Precision: {CurrentPrecision:.3f} | Recall: {CurrentRecall:.3f} | F1: {CurrentF1:.3f}"
     )
-    
+
+    BestPrompt = GetBestPromptByF1(IterationResults)
+    print("\nEvaluating best prompt on validation data...")
+    (
+        ValidationAccuracy,
+        ValidationPrecision,
+        ValidationRecall,
+        ValidationF1,
+        _,
+        _,
+    ) = await EvaluatePrompt(BestPrompt, ValidationData, TargetLabel)
+    print(
+        f"Validation Accuracy: {ValidationAccuracy:.3f} | Precision: {ValidationPrecision:.3f} | Recall: {ValidationRecall:.3f} | F1: {ValidationF1:.3f}"
+    )
+
     # Save results to JSON file
     with open('PromptTracing.json', 'w') as JsonFile:
         json.dump(IterationResults, JsonFile, indent=2)
-    print(f"Results Saved")
+    print("Results Saved")
 
 if __name__ == "__main__":
     asyncio.run(Main())
