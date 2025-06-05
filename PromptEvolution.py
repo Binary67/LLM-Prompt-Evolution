@@ -112,23 +112,23 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels, Confusio
         
         # Second Azure OpenAI call: Generate revised prompt
         PromptRevisionRequest = f"""
-        Based on the following error analysis, please revise the original prompt to reduce these types of errors:
-        
+        Use the bullet-point findings from the error analysis below when rewriting the prompt. Clarify any ambiguous wording noted in the analysis and include short example snippets that demonstrate the correct output for tricky cases.
+
         Original Prompt: {Prompt}
-        
+
         Error Analysis: {ErrorAnalysis}
-        
+
         CRITICAL REQUIREMENT: The revised prompt MUST only use these exact labels: {LabelOptionsStr}
         DO NOT introduce any new labels or categories that are not in this list. The model should ONLY output one of these labels.
-        
+
         Please provide a revised prompt that:
-        1. Addresses the identified issues
-        2. Provides clearer instructions
-        3. Includes relevant examples with guidance
-        4. Removes any unnecessary, redundant, or outdated instructions from the original prompt. Keeps the prompt concise while maintaining effectiveness
-        5. Includes specific samples of wrong predictions together with why they are wrong to help the model avoid making the same mistakes
+        1. Incorporates the bullet-point findings from the error analysis
+        2. Clarifies ambiguous wording identified in the analysis
+        3. Includes short example text snippets showing correct output for tricky cases
+        4. Removes any unnecessary, redundant, or outdated instructions from the original prompt while keeping it concise and effective
+        5. Provides specific samples of wrong predictions together with why they are wrong to help the model avoid making the same mistakes
         6. MUST maintain exactly the same classification labels ({LabelOptionsStr}) - do not add new categories like 'uncertain', 'maybe', etc.
-        
+
         Return only the revised prompt, nothing else.
         """
         

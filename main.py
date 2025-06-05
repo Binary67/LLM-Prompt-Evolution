@@ -154,7 +154,7 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
             TargetLabel,
             CurrentConfusionMatrix,
         )
-        print("Bullet-point error analysis applied to prompt revision.")
+        print("Bullet-point findings, clarifications, and example snippets applied to prompt revision.")
         print(f"Revised Prompt: {RevisedPrompt}")
         
         # Evaluate revised prompt
