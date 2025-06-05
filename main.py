@@ -5,8 +5,9 @@ import json
 from sklearn.model_selection import train_test_split
 from PromptEvaluation import EvaluatePrompt
 from PromptEvolution import AnalyzeErrorsAndRevisePrompt
+from PromptSelector import PromptPool, SelectPrompt
 
-async def Main(MaxIterations=5, AccuracyThreshold=0.8):
+async def Main(MaxIterations=5, AccuracyThreshold=0.8, Epsilon=0.1):
     #######################
     ### Data Processing ###
     #######################
@@ -120,6 +121,9 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
     print(
         f"Initial Accuracy: {CurrentAccuracy:.3f} | Precision: {CurrentPrecision:.3f} | Recall: {CurrentRecall:.3f} | F1: {CurrentF1:.3f}"
     )
+
+    PromptPoolInstance = PromptPool()
+    PromptPoolInstance.AddPrompt(CurrentPrompt, CurrentAccuracy)
     
     # Store initial prompt and accuracy
     IterationResults.append({
@@ -137,27 +141,37 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
     
     for Iteration in range(MaxIterations):
         print(f"\n--- Iteration {Iteration + 1} ---")
-        
-        # Check if accuracy threshold is reached
+
         if CurrentAccuracy >= AccuracyThreshold:
             print(f"Accuracy threshold {AccuracyThreshold:.3f} reached! Stopping iterations.")
             break
-            
-        # Analyze errors and get revised prompt
+
+        SelectedPrompt = SelectPrompt(PromptPoolInstance, Epsilon)
+        print("Evaluating selected prompt...")
+        (
+            CurrentAccuracy,
+            CurrentPrecision,
+            CurrentRecall,
+            CurrentF1,
+            CurrentEvaluationResults,
+            CurrentConfusionMatrix,
+        ) = await EvaluatePrompt(SelectedPrompt, TrainingData, TargetLabel)
+        print(
+            f"Selected Accuracy: {CurrentAccuracy:.3f} | Precision: {CurrentPrecision:.3f} | Recall: {CurrentRecall:.3f} | F1: {CurrentF1:.3f}"
+        )
+
         print("Analyzing errors and generating revised prompt...")
-        print(f"Number of evaluation results: {len(CurrentEvaluationResults)}")
         ErrorCount = len(CurrentEvaluationResults[CurrentEvaluationResults['ExtractedLabel'] != CurrentEvaluationResults['label']])
         print(f"Number of errors found: {ErrorCount}")
         RevisedPrompt = await AnalyzeErrorsAndRevisePrompt(
-            CurrentPrompt,
+            SelectedPrompt,
             CurrentEvaluationResults,
             TargetLabel,
             CurrentConfusionMatrix,
         )
         print("Bullet-point findings, clarifications, and example snippets applied to prompt revision.")
         print(f"Revised Prompt: {RevisedPrompt}")
-        
-        # Evaluate revised prompt
+
         print("Evaluating revised prompt...")
         (
             RevisedAccuracy,
@@ -170,8 +184,7 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         print(
             f"Revised Accuracy: {RevisedAccuracy:.3f} | Precision: {RevisedPrecision:.3f} | Recall: {RevisedRecall:.3f} | F1: {RevisedF1:.3f}"
         )
-        
-        # Update current prompt and accuracy for next iteration
+
         CurrentPrompt = RevisedPrompt
         CurrentAccuracy = RevisedAccuracy
         CurrentPrecision = RevisedPrecision
@@ -179,8 +192,9 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         CurrentF1 = RevisedF1
         CurrentEvaluationResults = RevisedEvaluationResults
         CurrentConfusionMatrix = RevisedConfusionMatrix
-        
-        # Store iteration results
+
+        PromptPoolInstance.AddPrompt(RevisedPrompt, RevisedAccuracy)
+
         IterationResults.append({
             "iteration": Iteration + 1,
             "prompt": CurrentPrompt,
