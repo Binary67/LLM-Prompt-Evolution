@@ -4,8 +4,43 @@ import asyncio
 import re
 from openai import AsyncAzureOpenAI
 from dotenv import load_dotenv
+import time
 
 load_dotenv()
+
+async def RetryAzureOpenAICall(CallFunction, MaxRetries=25, InitialDelay=1):
+    """
+    Retry Azure OpenAI API calls with exponential backoff.
+    
+    Args:
+        CallFunction: Async function to call
+        MaxRetries: Maximum number of retry attempts (default: 25)
+        InitialDelay: Initial delay in seconds (default: 1)
+    
+    Returns:
+        The result of the successful API call
+    
+    Raises:
+        Exception: If all retry attempts fail
+    """
+    Delay = InitialDelay
+    LastException = None
+    
+    for Attempt in range(MaxRetries + 1):
+        try:
+            Result = await CallFunction()
+            return Result
+        except Exception as e:
+            LastException = e
+            if Attempt < MaxRetries:
+                print(f"Azure OpenAI call failed (attempt {Attempt + 1}/{MaxRetries + 1}): {e}")
+                print(f"Retrying in {Delay} seconds...")
+                await asyncio.sleep(Delay)
+                # Exponential backoff with cap at 60 seconds
+                Delay = min(Delay * 2, 60)
+            else:
+                print(f"Azure OpenAI call failed after {MaxRetries + 1} attempts")
+                raise LastException
 
 def ExtractLabelFromPrediction(Prediction, TargetLabel):
     """
@@ -40,20 +75,19 @@ async def EvaluatePrompt(Prompt, Dataframe, TargetLabel):
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
     )
     
-    
     async def ProcessRow(Index, Row):
         FormattedPrompt = Prompt.format(text=Row['text'])
         
         try:
-            Response = await Client.chat.completions.create(
-                model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-                messages=[
-                    {"role": "user", "content": FormattedPrompt}
-                ],
-                max_tokens=100,
-                temperature=0
-            )
+            async def MakeAPICall():
+                return await Client.chat.completions.create(
+                    model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+                    messages=[
+                        {"role": "user", "content": FormattedPrompt}
+                    ],
+                )
             
+            Response = await RetryAzureOpenAICall(MakeAPICall)
             Prediction = Response.choices[0].message.content.strip()
             return Index, Prediction
             
@@ -79,6 +113,7 @@ async def EvaluatePrompt(Prompt, Dataframe, TargetLabel):
         ExtractedLabels.append(ExtractedLabel)
     
     Dataframe['ExtractedLabel'] = ExtractedLabels
+    print(Dataframe['ExtractedLabel'].unique())
     
     # Calculate accuracy using extracted labels
     CorrectPredictions = sum(1 for ExtractedLabel, Label in zip(ExtractedLabels, Dataframe['label']) 

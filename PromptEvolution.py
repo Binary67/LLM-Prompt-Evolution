@@ -3,16 +3,53 @@ import os
 import asyncio
 from openai import AsyncAzureOpenAI
 from dotenv import load_dotenv
+import time
+import re
 
 load_dotenv()
 
-async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe):
+async def RetryAzureOpenAICall(CallFunction, MaxRetries=25, InitialDelay=1):
+    """
+    Retry Azure OpenAI API calls with exponential backoff.
+    
+    Args:
+        CallFunction: Async function to call
+        MaxRetries: Maximum number of retry attempts (default: 25)
+        InitialDelay: Initial delay in seconds (default: 1)
+    
+    Returns:
+        The result of the successful API call
+    
+    Raises:
+        Exception: If all retry attempts fail
+    """
+    Delay = InitialDelay
+    LastException = None
+    
+    for Attempt in range(MaxRetries + 1):
+        try:
+            Result = await CallFunction()
+            return Result
+        except Exception as e:
+            LastException = e
+            if Attempt < MaxRetries:
+                print(f"Azure OpenAI call failed (attempt {Attempt + 1}/{MaxRetries + 1}): {e}")
+                print(f"Retrying in {Delay} seconds...")
+                await asyncio.sleep(Delay)
+                # Exponential backoff with cap at 60 seconds
+                Delay = min(Delay * 2, 60)
+            else:
+                print(f"Azure OpenAI call failed after {MaxRetries + 1} attempts")
+                raise LastException
+
+async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels):
     """
     Analyzes prediction errors and generates a revised prompt to reduce errors.
     
     Args:
         Prompt (str): The original prompt used for predictions
         Dataframe (pd.DataFrame): DataFrame containing 'ModelPrediction', 'ExtractedLabel', and other columns
+        TargetLabels (list): List of valid labels that the model should use
         
     Returns:
         str: Revised prompt based on error analysis
@@ -37,7 +74,7 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe):
         ErrorSample = f"Text: {Row['text']}\nExpected: {Row['label']}\nPredicted: {Row['ModelPrediction']}\nExtracted: {Row['ExtractedLabel']}"
         ErrorSamples.append(ErrorSample)
     
-    ErrorAnalysisInput = "\n\n".join(ErrorSamples[:5])  # Limit to first 5 errors
+    ErrorAnalysisInput = "\n\n".join(ErrorSamples[:20])  # Limit to first 5 errors
     
     # First Azure OpenAI call: Analyze errors
     ErrorAnalysisPrompt = f"""
@@ -58,14 +95,19 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe):
     """
     
     try:
-        ErrorAnalysisResponse = await Client.chat.completions.create(
-            model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-            messages=[
-                {"role": "user", "content": ErrorAnalysisPrompt}
-            ],
-        )
+        async def MakeErrorAnalysisCall():
+            return await Client.chat.completions.create(
+                model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+                messages=[
+                    {"role": "user", "content": ErrorAnalysisPrompt}
+                ],
+            )
         
+        ErrorAnalysisResponse = await RetryAzureOpenAICall(MakeErrorAnalysisCall)
         ErrorAnalysis = ErrorAnalysisResponse.choices[0].message.content.strip()
+        
+        # Format the target labels for the prompt
+        LabelOptionsStr = ', '.join([f"'{label}'" for label in TargetLabels])
         
         # Second Azure OpenAI call: Generate revised prompt
         PromptRevisionRequest = f"""
@@ -75,27 +117,32 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe):
         
         Error Analysis: {ErrorAnalysis}
         
+        CRITICAL REQUIREMENT: The revised prompt MUST only use these exact labels: {LabelOptionsStr}
+        DO NOT introduce any new labels or categories that are not in this list. The model should ONLY output one of these labels.
+        
         Please provide a revised prompt that:
         1. Addresses the identified issues
         2. Provides clearer instructions
-        3. Includes relevant examples or guidance
+        3. Includes relevant examples with guidance
         4. Removes any unnecessary, redundant, or outdated instructions from the original prompt. Keeps the prompt concise while maintaining effectiveness
-        5. Includes specific samples of wrong predictions together with their correct answers to help the model avoid making the same mistakes
+        5. Includes specific samples of wrong predictions together with why they are wrong to help the model avoid making the same mistakes
+        6. MUST maintain exactly the same classification labels ({LabelOptionsStr}) - do not add new categories like 'uncertain', 'maybe', etc.
         
         Return only the revised prompt, nothing else.
         """
         
-        PromptRevisionResponse = await Client.chat.completions.create(
-            model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-            messages=[
-                {"role": "user", "content": PromptRevisionRequest}
-            ],
-        )
+        async def MakePromptRevisionCall():
+            return await Client.chat.completions.create(
+                model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+                messages=[
+                    {"role": "user", "content": PromptRevisionRequest}
+                ],
+            )
         
+        PromptRevisionResponse = await RetryAzureOpenAICall(MakePromptRevisionCall)
         RevisedPrompt = PromptRevisionResponse.choices[0].message.content.strip()
         
         # Remove all {} placeholders and append fixed sentence
-        import re
         RevisedPrompt = re.sub(r'\{[^}]*\}', '', RevisedPrompt)
         RevisedPrompt = RevisedPrompt + "\nHere is the talent feedback: {text}"
         

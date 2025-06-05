@@ -62,7 +62,7 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
     ########################
     TargetLabel = ['has_aspiration', 'no_aspiration']
     LabelOptions = ', '.join([f"'{label}'" for label in TargetLabel])
-    CurrentPrompt = f"Analyze the following talent feedback and determine if it shows aspiration. Respond with one of: {LabelOptions} only. {{text}}"
+    CurrentPrompt = f"Analyze the following talent feedback and determine if it shows career aspiration. Respond with one of: {LabelOptions} only. Here is the talent feedback: {{text}}"
     
     # Initialize results list to store prompt and accuracy for each iteration
     IterationResults = []
@@ -94,7 +94,7 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         print(f"Number of evaluation results: {len(CurrentEvaluationResults)}")
         ErrorCount = len(CurrentEvaluationResults[CurrentEvaluationResults['ExtractedLabel'] != CurrentEvaluationResults['label']])
         print(f"Number of errors found: {ErrorCount}")
-        RevisedPrompt = await AnalyzeErrorsAndRevisePrompt(CurrentPrompt, CurrentEvaluationResults)
+        RevisedPrompt = await AnalyzeErrorsAndRevisePrompt(CurrentPrompt, CurrentEvaluationResults, TargetLabel)
         print(f"Revised Prompt: {RevisedPrompt}")
         
         # Evaluate revised prompt
