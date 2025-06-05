@@ -42,7 +42,7 @@ async def RetryAzureOpenAICall(CallFunction, MaxRetries=25, InitialDelay=1):
                 print(f"Azure OpenAI call failed after {MaxRetries + 1} attempts")
                 raise LastException
 
-async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels):
+async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels, ConfusionMatrix):
     """
     Analyzes prediction errors and generates a revised prompt to reduce errors.
     
@@ -50,6 +50,7 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels):
         Prompt (str): The original prompt used for predictions
         Dataframe (pd.DataFrame): DataFrame containing 'ModelPrediction', 'ExtractedLabel', and other columns
         TargetLabels (list): List of valid labels that the model should use
+        ConfusionMatrix (pd.DataFrame): Confusion matrix of labels vs predictions
         
     Returns:
         str: Revised prompt based on error analysis
@@ -79,12 +80,15 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels):
     # First Azure OpenAI call: Analyze errors
     ErrorAnalysisPrompt = f"""
     Analyze the following prediction errors from a text classification model:
-    
+
     Original Prompt: {Prompt}
-    
+
     Error Examples:
     {ErrorAnalysisInput}
-    
+
+    Confusion Matrix:
+    {ConfusionMatrix}
+
     Please analyze these errors and identify:
     1. Common patterns in the misclassifications
     2. Potential ambiguities in the original prompt
