@@ -15,7 +15,7 @@ def GetBestPromptByF1(Results):
     BestEntry = max(Results, key=lambda Item: Item["f1"])
     return BestEntry["prompt"]
 
-async def Main(MaxIterations=5, AccuracyThreshold=0.8, Epsilon=0.1):
+async def Main(MaxIterations=5, AccuracyThreshold=0.85, Epsilon=0.1):
     #######################
     ### Data Processing ###
     #######################
@@ -164,9 +164,6 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8, Epsilon=0.1):
             CurrentEvaluationResults,
             CurrentConfusionMatrix,
         ) = await EvaluatePrompt(SelectedPrompt, TrainingData, TargetLabel)
-        print(
-            f"Selected Accuracy: {CurrentAccuracy:.3f} | Precision: {CurrentPrecision:.3f} | Recall: {CurrentRecall:.3f} | F1: {CurrentF1:.3f}"
-        )
 
         print("Analyzing errors and generating revised prompt...")
         ErrorCount = len(CurrentEvaluationResults[CurrentEvaluationResults['ExtractedLabel'] != CurrentEvaluationResults['label']])
@@ -177,8 +174,6 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8, Epsilon=0.1):
             TargetLabel,
             CurrentConfusionMatrix,
         )
-        print("Bullet-point findings, clarifications, and example snippets applied to prompt revision.")
-        print(f"Revised Prompt: {RevisedPrompt}")
 
         print("Evaluating revised prompt...")
         (
