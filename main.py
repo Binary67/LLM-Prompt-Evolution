@@ -4,7 +4,7 @@ import asyncio
 from sklearn.model_selection import train_test_split
 from PromptEvaluation import EvaluatePrompt
 
-if __name__ == "__main__":
+async def Main():
     #######################
     ### Data Processing ###
     #######################
@@ -28,9 +28,8 @@ if __name__ == "__main__":
     ########################
     ExamplePrompt = "Analyze the following talent feedback and determine if it shows aspiration. Respond with 'has_aspiration' or 'no_aspiration'. {text}"
     
-    async def RunEvaluation():
-        Accuracy, ResultsData = await EvaluatePrompt(ExamplePrompt, ValidationData)
-        print(f"Accuracy: {Accuracy:.3f}")
-        return Accuracy, ResultsData
-    
-    Accuracy, EvaluationResults = asyncio.run(RunEvaluation())
+    Accuracy, EvaluationResults = await EvaluatePrompt(ExamplePrompt, ValidationData)
+    print(f"Accuracy: {Accuracy:.3f}")
+
+if __name__ == "__main__":
+    asyncio.run(Main())
