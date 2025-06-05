@@ -170,7 +170,6 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         print(
             f"Revised Accuracy: {RevisedAccuracy:.3f} | Precision: {RevisedPrecision:.3f} | Recall: {RevisedRecall:.3f} | F1: {RevisedF1:.3f}"
         )
-        print(f"Improvement: {RevisedAccuracy - CurrentAccuracy:.3f}")
         
         # Update current prompt and accuracy for next iteration
         CurrentPrompt = RevisedPrompt
