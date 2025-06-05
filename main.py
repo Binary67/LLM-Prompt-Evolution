@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
+import asyncio
 from sklearn.model_selection import train_test_split
+from PromptEvaluation import EvaluatePrompt
 
 if __name__ == "__main__":
     #######################
@@ -20,3 +22,15 @@ if __name__ == "__main__":
     DataTA = DataTA.replace({'label': {'Yes': 'has_apiration', 'No': 'no_aspiration'}})
 
     TrainingData, ValidationData = train_test_split(DataTA, test_size = 0.33, stratify = DataTA['label'])
+
+    ########################
+    ### Prompt Evaluation ##
+    ########################
+    ExamplePrompt = "Analyze the following talent feedback and determine if it shows aspiration. Respond with 'has_aspiration' or 'no_aspiration'. {text}"
+    
+    async def RunEvaluation():
+        Accuracy, ResultsData = await EvaluatePrompt(ExamplePrompt, ValidationData)
+        print(f"Accuracy: {Accuracy:.3f}")
+        return Accuracy, ResultsData
+    
+    Accuracy, EvaluationResults = asyncio.run(RunEvaluation())
