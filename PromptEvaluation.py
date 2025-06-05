@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 async def EvaluatePrompt(Prompt, Dataframe):
+    Dataframe = Dataframe.reset_index(drop=True)
+
     Client = AsyncAzureOpenAI(
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
@@ -36,7 +38,7 @@ async def EvaluatePrompt(Prompt, Dataframe):
             print(f"Error processing row {Index}: {e}")
             return Index, "Error"
     
-    Tasks = [ProcessRow(Index, Row) for Index, Row in Dataframe.iterrows()]
+    Tasks = [ProcessRow(Position, Row) for Position, (_, Row) in enumerate(Dataframe.iterrows())]
     Results = await asyncio.gather(*Tasks)
     
     Predictions = [""] * len(Dataframe)
