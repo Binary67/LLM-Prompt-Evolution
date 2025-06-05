@@ -7,13 +7,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def ExtractLabelFromPrediction(Prediction, ValidLabels):
+def ExtractLabelFromPrediction(Prediction, TargetLabel):
     """
-    Extract label from prediction using a simple pattern matching.
+    Extract label from prediction using simple exact word matching.
     
     Args:
         Prediction (str): The raw model prediction text
-        ValidLabels (list): List of valid labels to match against
+        TargetLabel (list): List of target labels to match against
     
     Returns:
         str: The extracted label or None if no match found
@@ -23,15 +23,17 @@ def ExtractLabelFromPrediction(Prediction, ValidLabels):
     
     PredictionLower = Prediction.lower().strip()
     
-    # Check for specific patterns with flexibility for underscores/spaces
-    if re.search(r'\bhas[_\s]*aspiration\b', PredictionLower):
-        return 'has_aspiration'
-    elif re.search(r'\bno[_\s]*aspiration\b', PredictionLower):
-        return 'no_aspiration'
+    # Check for each target label in the prediction
+    for Label in TargetLabel:
+        LabelLower = Label.lower()
+        
+        # Use regex to find exact word match
+        if re.search(rf'\b{re.escape(LabelLower)}\b', PredictionLower):
+            return Label
     
     return None
 
-async def EvaluatePrompt(Prompt, Dataframe):
+async def EvaluatePrompt(Prompt, Dataframe, TargetLabel):
     Client = AsyncAzureOpenAI(
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
@@ -72,13 +74,10 @@ async def EvaluatePrompt(Prompt, Dataframe):
     
     Dataframe['ModelPrediction'] = PredictionsList
     
-    # Get unique labels from the dataframe
-    ValidLabels = Dataframe['label'].unique().tolist()
-    
     # Extract labels from predictions using regex
     ExtractedLabels = []
     for Prediction in PredictionsList:
-        ExtractedLabel = ExtractLabelFromPrediction(Prediction, ValidLabels)
+        ExtractedLabel = ExtractLabelFromPrediction(Prediction, TargetLabel)
         ExtractedLabels.append(ExtractedLabel)
     
     Dataframe['ExtractedLabel'] = ExtractedLabels

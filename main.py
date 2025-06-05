@@ -58,9 +58,11 @@ async def Main():
     ########################
     ### Prompt Evaluation ##
     ########################
-    ExamplePrompt = "Analyze the following talent feedback and determine if it shows aspiration. Respond with 'has_aspiration' or 'has_aspiration'. {text}"
+    TargetLabel = ['has_aspiration', 'no_aspiration']
+    LabelOptions = ', '.join([f"'{label}'" for label in TargetLabel])
+    ExamplePrompt = f"Analyze the following talent feedback and determine if it shows aspiration. Respond with one of: {LabelOptions} only. {{text}}"
     
-    Accuracy, EvaluationResults = await EvaluatePrompt(ExamplePrompt, ValidationData)
+    Accuracy, EvaluationResults = await EvaluatePrompt(ExamplePrompt, ValidationData, TargetLabel)
     print(f"Accuracy: {Accuracy:.3f}")
 
 if __name__ == "__main__":
