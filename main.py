@@ -32,4 +32,4 @@ async def Main():
     print(f"Accuracy: {Accuracy:.3f}")
 
 if __name__ == "__main__":
-    asyncio.run(Main())
+    await Main()
