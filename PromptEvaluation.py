@@ -163,4 +163,8 @@ async def EvaluatePrompt(Prompt, Dataframe, TargetLabel):
         else 0.0
     )
 
-    return Accuracy, Precision, Recall, F1, Dataframe
+    ConfusionMatrix = pd.crosstab(
+        Dataframe["label"], Dataframe["ExtractedLabel"], dropna=False
+    )
+
+    return Accuracy, Precision, Recall, F1, Dataframe, ConfusionMatrix

@@ -73,6 +73,7 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         CurrentRecall,
         CurrentF1,
         CurrentEvaluationResults,
+        CurrentConfusionMatrix,
     ) = await EvaluatePrompt(CurrentPrompt, TrainingData, TargetLabel)
     print(
         f"Initial Accuracy: {CurrentAccuracy:.3f} | Precision: {CurrentPrecision:.3f} | Recall: {CurrentRecall:.3f} | F1: {CurrentF1:.3f}"
@@ -105,7 +106,12 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         print(f"Number of evaluation results: {len(CurrentEvaluationResults)}")
         ErrorCount = len(CurrentEvaluationResults[CurrentEvaluationResults['ExtractedLabel'] != CurrentEvaluationResults['label']])
         print(f"Number of errors found: {ErrorCount}")
-        RevisedPrompt = await AnalyzeErrorsAndRevisePrompt(CurrentPrompt, CurrentEvaluationResults, TargetLabel)
+        RevisedPrompt = await AnalyzeErrorsAndRevisePrompt(
+            CurrentPrompt,
+            CurrentEvaluationResults,
+            TargetLabel,
+            CurrentConfusionMatrix,
+        )
         print(f"Revised Prompt: {RevisedPrompt}")
         
         # Evaluate revised prompt
@@ -116,6 +122,7 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
             RevisedRecall,
             RevisedF1,
             RevisedEvaluationResults,
+            RevisedConfusionMatrix,
         ) = await EvaluatePrompt(RevisedPrompt, TrainingData, TargetLabel)
         print(
             f"Revised Accuracy: {RevisedAccuracy:.3f} | Precision: {RevisedPrecision:.3f} | Recall: {RevisedRecall:.3f} | F1: {RevisedF1:.3f}"
@@ -129,6 +136,7 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         CurrentRecall = RevisedRecall
         CurrentF1 = RevisedF1
         CurrentEvaluationResults = RevisedEvaluationResults
+        CurrentConfusionMatrix = RevisedConfusionMatrix
         
         # Store iteration results
         IterationResults.append({
