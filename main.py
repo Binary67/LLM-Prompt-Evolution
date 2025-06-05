@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from PromptEvaluation import EvaluatePrompt
 from PromptEvolution import AnalyzeErrorsAndRevisePrompt
 from PromptSelector import PromptPool, SelectPrompt
+from PromptTracingUtils import SaveResultsWithBestPrompt
 
 
 def GetBestPromptByF1(Results):
@@ -225,10 +226,10 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.85, Epsilon=0.1):
         f"Validation Accuracy: {ValidationAccuracy:.3f} | Precision: {ValidationPrecision:.3f} | Recall: {ValidationRecall:.3f} | F1: {ValidationF1:.3f}"
     )
 
-    # Save results to JSON file
-    with open('PromptTracing.json', 'w') as JsonFile:
-        json.dump(IterationResults, JsonFile, indent=2)
+    # Save results to JSON file with best prompt appended
+    SaveResultsWithBestPrompt(IterationResults, BestPrompt, 'PromptTracing.json')
     print("Results Saved")
+
 
 if __name__ == "__main__":
     asyncio.run(Main())
