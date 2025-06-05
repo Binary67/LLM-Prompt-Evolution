@@ -67,14 +67,25 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
     # Initialize results list to store prompt and accuracy for each iteration
     IterationResults = []
     
-    CurrentAccuracy, CurrentEvaluationResults = await EvaluatePrompt(CurrentPrompt, TrainingData, TargetLabel)
-    print(f"Initial Accuracy: {CurrentAccuracy:.3f}")
+    (
+        CurrentAccuracy,
+        CurrentPrecision,
+        CurrentRecall,
+        CurrentF1,
+        CurrentEvaluationResults,
+    ) = await EvaluatePrompt(CurrentPrompt, TrainingData, TargetLabel)
+    print(
+        f"Initial Accuracy: {CurrentAccuracy:.3f} | Precision: {CurrentPrecision:.3f} | Recall: {CurrentRecall:.3f} | F1: {CurrentF1:.3f}"
+    )
     
     # Store initial prompt and accuracy
     IterationResults.append({
         "iteration": 0,
         "prompt": CurrentPrompt,
-        "accuracy": CurrentAccuracy
+        "accuracy": CurrentAccuracy,
+        "precision": CurrentPrecision,
+        "recall": CurrentRecall,
+        "f1": CurrentF1,
     })
     
     #########################
@@ -99,23 +110,39 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
         
         # Evaluate revised prompt
         print("Evaluating revised prompt...")
-        RevisedAccuracy, RevisedEvaluationResults = await EvaluatePrompt(RevisedPrompt, TrainingData, TargetLabel)
-        print(f"Revised Accuracy: {RevisedAccuracy:.3f}")
+        (
+            RevisedAccuracy,
+            RevisedPrecision,
+            RevisedRecall,
+            RevisedF1,
+            RevisedEvaluationResults,
+        ) = await EvaluatePrompt(RevisedPrompt, TrainingData, TargetLabel)
+        print(
+            f"Revised Accuracy: {RevisedAccuracy:.3f} | Precision: {RevisedPrecision:.3f} | Recall: {RevisedRecall:.3f} | F1: {RevisedF1:.3f}"
+        )
         print(f"Improvement: {RevisedAccuracy - CurrentAccuracy:.3f}")
         
         # Update current prompt and accuracy for next iteration
         CurrentPrompt = RevisedPrompt
         CurrentAccuracy = RevisedAccuracy
+        CurrentPrecision = RevisedPrecision
+        CurrentRecall = RevisedRecall
+        CurrentF1 = RevisedF1
         CurrentEvaluationResults = RevisedEvaluationResults
         
         # Store iteration results
         IterationResults.append({
             "iteration": Iteration + 1,
             "prompt": CurrentPrompt,
-            "accuracy": CurrentAccuracy
+            "accuracy": CurrentAccuracy,
+            "precision": CurrentPrecision,
+            "recall": CurrentRecall,
+            "f1": CurrentF1,
         })
     
-    print(f"\nFinal Accuracy after {min(Iteration + 1, MaxIterations)} iterations: {CurrentAccuracy:.3f}")
+    print(
+        f"\nFinal Accuracy after {min(Iteration + 1, MaxIterations)} iterations: {CurrentAccuracy:.3f} | Precision: {CurrentPrecision:.3f} | Recall: {CurrentRecall:.3f} | F1: {CurrentF1:.3f}"
+    )
     
     # Save results to JSON file
     with open('PromptTracing.json', 'w') as JsonFile:

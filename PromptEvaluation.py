@@ -116,8 +116,51 @@ async def EvaluatePrompt(Prompt, Dataframe, TargetLabel):
     print(Dataframe['ExtractedLabel'].unique())
     
     # Calculate accuracy using extracted labels
-    CorrectPredictions = sum(1 for ExtractedLabel, Label in zip(ExtractedLabels, Dataframe['label']) 
-                           if ExtractedLabel is not None and ExtractedLabel.lower() == Label.lower())
+    CorrectPredictions = sum(
+        1
+        for ExtractedLabel, Label in zip(ExtractedLabels, Dataframe['label'])
+        if ExtractedLabel is not None and ExtractedLabel.lower() == Label.lower()
+    )
     Accuracy = CorrectPredictions / len(Dataframe)
-    
-    return Accuracy, Dataframe
+
+    # Determine positive label for precision/recall metrics
+    PositiveLabel = TargetLabel[0].lower() if TargetLabel else None
+
+    TruePositive = sum(
+        1
+        for Pred, Truth in zip(ExtractedLabels, Dataframe['label'])
+        if Pred is not None
+        and Pred.lower() == PositiveLabel
+        and Truth.lower() == PositiveLabel
+    )
+    FalsePositive = sum(
+        1
+        for Pred, Truth in zip(ExtractedLabels, Dataframe['label'])
+        if Pred is not None
+        and Pred.lower() == PositiveLabel
+        and Truth.lower() != PositiveLabel
+    )
+    FalseNegative = sum(
+        1
+        for Pred, Truth in zip(ExtractedLabels, Dataframe['label'])
+        if (Pred is None or Pred.lower() != PositiveLabel)
+        and Truth.lower() == PositiveLabel
+    )
+
+    Precision = (
+        TruePositive / (TruePositive + FalsePositive)
+        if (TruePositive + FalsePositive) > 0
+        else 0.0
+    )
+    Recall = (
+        TruePositive / (TruePositive + FalseNegative)
+        if (TruePositive + FalseNegative) > 0
+        else 0.0
+    )
+    F1 = (
+        2 * Precision * Recall / (Precision + Recall)
+        if (Precision + Recall) > 0
+        else 0.0
+    )
+
+    return Accuracy, Precision, Recall, F1, Dataframe
