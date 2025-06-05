@@ -79,9 +79,10 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels, Confusio
     
     # First Azure OpenAI call: Analyze errors
     ErrorAnalysisPrompt = f"""
-    Analyze the following prediction errors from a text classification model:
+    You are an expert prompt engineer. Review these prediction errors from a text classification model.
 
-    Original Prompt: {Prompt}
+    Original Prompt:
+    {Prompt}
 
     Error Examples:
     {ErrorAnalysisInput}
@@ -89,13 +90,9 @@ async def AnalyzeErrorsAndRevisePrompt(Prompt, Dataframe, TargetLabels, Confusio
     Confusion Matrix:
     {ConfusionMatrix}
 
-    Please analyze these errors and identify:
-    1. Common patterns in the misclassifications
-    2. Potential ambiguities in the original prompt
-    3. Missing guidance or instructions that could help the model
-    4. Specific areas where the prompt could be clearer
-    
-    Provide a detailed analysis of what went wrong.
+    Summarize your findings using bullet points organized by predicted vs true label pairs.
+    Reference specific mistakes from the examples above and explain potential causes such as ambiguous phrases,
+    missing instructions, or label overlap. Conclude with concise bullet points highlighting what to fix in the prompt.
     """
     
     try:
