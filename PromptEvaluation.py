@@ -40,8 +40,6 @@ async def EvaluatePrompt(Prompt, Dataframe, TargetLabel):
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
     )
     
-    if "{text}" not in Prompt:
-        Prompt = Prompt + " Here is the talent feedback: {text}"
     
     async def ProcessRow(Index, Row):
         FormattedPrompt = Prompt.format(text=Row['text'])
