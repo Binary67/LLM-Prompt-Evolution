@@ -13,29 +13,71 @@ async def Main(MaxIterations=5, AccuracyThreshold=0.8):
     
     # Generate dummy DataTA for testing
     DummyTalentStatements = [
+        # Has aspiration examples
         "I aspire to become a team leader in the next two years",
         "Looking forward to taking on more challenging projects",
         "I want to develop my technical skills further",
         "Seeking opportunities for career advancement",
-        "Happy with my current role and responsibilities",
-        "Content with maintaining my current position",
-        "Not interested in additional responsibilities",
-        "Prefer to focus on work-life balance",
         "Eager to learn new technologies and methodologies",
         "Aiming for a promotion within the next year",
         "Would like to mentor junior team members",
         "Planning to pursue additional certifications",
+        "Interested in cross-functional collaboration",
+        "Hoping to lead strategic initiatives",
+        "Want to expand my role to include strategic planning",
+        "Interested in transitioning to management",
+        "Looking to specialize in emerging technologies",
+        "Aspire to become a subject matter expert",
+        "Seeking international assignment opportunities",
+        "Want to contribute to company innovation projects",
+        "Planning to pursue an MBA to advance my career",
+        "Interested in leading a product development team",
+        "Aiming to become a technical architect",
+        "Looking for opportunities to present at conferences",
+        # No aspiration examples
+        "Happy with my current role and responsibilities",
+        "Content with maintaining my current position",
+        "Not interested in additional responsibilities",
+        "Prefer to focus on work-life balance",
         "Satisfied with current workload and duties",
         "Not looking for career changes at this time",
-        "Interested in cross-functional collaboration",
-        "Hoping to lead strategic initiatives"
+        "Comfortable in my current position",
+        "Prefer to stay in my area of expertise",
+        "Not seeking additional challenges at this time",
+        "Content with my current level of responsibility",
+        "Focused on maintaining stability in my role",
+        "Happy to continue in my current capacity",
+        "Not interested in management responsibilities",
+        "Prefer individual contributor role",
+        "Satisfied with current career trajectory",
+        "Not looking to change my work situation",
+        "Content with my current team and duties",
+        "Prefer predictable work responsibilities",
+        "Not interested in leadership positions",
+        "Happy with my current work arrangement"
     ]
     
-    DummyValidation = ['Agree', 'Agree', 'Agree', 'Agree', 'Disagree', 'Disagree', 'Disagree', 'Disagree',
-                       'Agree', 'Agree', 'Agree', 'Agree', 'Disagree', 'Disagree', 'Agree', 'Agree']
+    DummyValidation = [
+        # Mixed validations for has aspiration examples
+        'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 
+        'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Disagree',
+        'Disagree', 'Disagree', 'Disagree', 'Disagree',
+        # Mixed validations for no aspiration examples
+        'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree',
+        'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Agree', 'Disagree',
+        'Disagree', 'Disagree', 'Disagree', 'Disagree'
+    ]
     
-    DummyHasAspiration = ['Yes', 'No', 'Yes', 'No', 'No', 'No', 'No', 'No',
-                          'Yes', 'Yes', 'Yes', 'Yes', 'No', 'No', 'Yes', 'Yes']
+    DummyHasAspiration = [
+        # Has aspiration labels
+        'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes',
+        'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes',
+        'Yes', 'Yes', 'Yes', 'Yes',
+        # No aspiration labels
+        'No', 'No', 'No', 'No', 'No', 'No', 'No', 'No',
+        'No', 'No', 'No', 'No', 'No', 'No', 'No', 'No',
+        'No', 'No', 'No', 'No'
+    ]
     
     DataTA = pd.DataFrame({
         'talent_statement': DummyTalentStatements,
